@@ -48,13 +48,30 @@
 
 /* Include the chip pin configuration file */
 
+/* STM32L EnergyLite Line ***********************************************************/
+
+#if defined(CONFIG_STM32_ENERGYLITE)
+
+/* STM32L15xx family */
+
+#  if defined(CONFIG_STM32_STM32L15XX)
+#    include "chip/stm32l15xxx_pinmap.h"
+#  else
+#    error "Unsupported EnergyLite chip"
+#  endif
+
 /* STM32 F1 Family ******************************************************************/
-#if defined(CONFIG_STM32_STM32F10XX)
+
+#elif defined(CONFIG_STM32_STM32F10XX)
 
 /* STM32F100 Value Line */
 
 #  if defined(CONFIG_STM32_VALUELINE)
 #    include "chip/stm32f100_pinmap.h"
+
+/* STM32 F103 Low / Medium Density Family */
+#  elif defined(CONFIG_ARCH_CHIP_STM32F103C4) || defined(CONFIG_ARCH_CHIP_STM32F103C8)
+#    include "chip/stm32f103c_pinmap.h"
 
 /* STM32 F103 High Density Family */
 /* STM32F103RC, STM32F103RD, and STM32F103RE are all provided in 64 pin packages and differ
@@ -74,7 +91,7 @@
 /* STM32F103ZC, STM32F103ZD, and STM32F103ZE are all provided in 144 pin packages and differ
  * only in the available FLASH and SRAM.
  */
-#  elif defined(CONFIG_ARCH_CHIP_STM32F103ZET6) 
+#  elif defined(CONFIG_ARCH_CHIP_STM32F103ZET6)
 #    include "chip/stm32f103ze_pinmap.h"
 
 /* STM32 F105/F107 Connectivity Line */
@@ -89,10 +106,17 @@
 #  endif
 
 /* STM32 F2 Family ******************************************************************/
+
 #elif defined(CONFIG_STM32_STM32F20XX)
 #  include "chip/stm32f20xxx_pinmap.h"
 
+/* STM32 F3 Family ******************************************************************/
+
+#elif defined(CONFIG_STM32_STM32F30XX)
+#  include "chip/stm32f30xxx_pinmap.h"
+
 /* STM32 F4 Family ******************************************************************/
+
 #elif defined(CONFIG_STM32_STM32F40XX)
 #  include "chip/stm32f40xxx_pinmap.h"
 #else
@@ -104,10 +128,14 @@
  */
 
 #ifdef CONFIG_ARMV7M_CMNVECTOR
-#  if defined(CONFIG_STM32_STM32F10XX)
+#  if defined(CONFIG_STM32_STM32L15XX)
+#    include "chip/stm32l15xxx_vectors.h"
+#  elif defined(CONFIG_STM32_STM32F10XX)
 #    include "chip/stm32f10xxx_vectors.h"
 #  elif defined(CONFIG_STM32_STM32F20XX)
 #    include "chip/stm32f20xxx_vectors.h"
+#  elif defined(CONFIG_STM32_STM32F30XX)
+#    include "chip/stm32f30xxx_vectors.h"
 #  elif defined(CONFIG_STM32_STM32F40XX)
 #    include "chip/stm32f40xxx_vectors.h"
 #  else
