@@ -48,6 +48,7 @@
 
 #define DEBUG
 #include "mavstation.h"
+#include "adc.h"
 
 /*
  * Register accessors.
@@ -78,8 +79,7 @@
 
 perf_counter_t		adc_perf;
 
-int
-adc_init(void)
+int adc_init(void)
 {
 	adc_perf = perf_alloc(PC_ELAPSED, "adc");
 
@@ -138,8 +138,7 @@ adc_init(void)
 /*
   return one measurement, or 0xffff on error
  */
-uint16_t
-adc_measure(unsigned channel)
+uint16_t adc_measure(uint8_t channel)
 {
 	perf_begin(adc_perf);
 

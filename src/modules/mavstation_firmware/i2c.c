@@ -44,8 +44,9 @@
 #include <stm32_i2c.h>
 #include <stm32_dma.h>
 
-//#define DEBUG
 #include "mavstation.h"
+#include "i2c.h"
+#include "registers.h"
 
 /*
  * I2C register definitions.
@@ -70,6 +71,7 @@ static void		i2c_tx_setup(void);
 static void		i2c_rx_complete(void);
 static void		i2c_tx_complete(void);
 static void		i2c_dump(void);
+static void     i2c_reset(void);
 
 static DMA_HANDLE	rx_dma;
 static DMA_HANDLE	tx_dma;
@@ -92,8 +94,7 @@ enum {
 	DIR_RX = 2
 } direction;
 
-void
-interface_init(void)
+void i2c_interface_init(void)
 {
 	debug("i2c init");
 
@@ -149,18 +150,15 @@ interface_init(void)
 #endif
 }
 
-void
-interface_tick()
-{
-}
+void i2c_interface_tick(void) { }
 
 
 /*
   reset the I2C bus
   used to recover from lockups
  */
-void
-i2c_reset(void)
+#pragma GCC diagnostic ignored "-Wunused-function"
+void i2c_reset(void)
 {
 	rCR1 |= I2C_CR1_SWRST;
 	rCR1 = 0;
@@ -187,6 +185,7 @@ i2c_reset(void)
 	/* and enable the I2C port */
 	rCR1 |= I2C_CR1_ACK | I2C_CR1_PE;
 }
+#pragma GCC diagnostic pop
 
 static int
 i2c_interrupt(int irq, FAR void *context)
@@ -276,7 +275,7 @@ i2c_rx_complete(void)
 			registers_set(selected_page, selected_offset, (const uint16_t *)&rx_buf[2], count);
 		} else {
 			/* no registers written, must be an address cycle */
-			uint16_t *regs;
+			volatile uint16_t *regs;
 			unsigned reg_count;
 
 			/* work out which registers are being addressed */
@@ -337,11 +336,13 @@ i2c_tx_complete(void)
 	i2c_tx_setup();
 }
 
-static void
-i2c_dump(void)
+#pragma GCC diagnostic ignored "-Wunused-function"
+static void i2c_dump(void)
 {
 	debug("CR1   0x%08x  CR2   0x%08x", rCR1,  rCR2);
 	debug("OAR1  0x%08x  OAR2  0x%08x", rOAR1, rOAR2);
 	debug("CCR   0x%08x  TRISE 0x%08x", rCCR,  rTRISE);
 	debug("SR1   0x%08x  SR2   0x%08x", rSR1,  rSR2);
 }
+#pragma GCC diagnostic pop
+

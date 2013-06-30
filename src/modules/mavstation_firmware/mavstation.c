@@ -55,12 +55,15 @@
 
 #define DEBUG
 #include "mavstation.h"
+#include "protocol.h"
+#include "registers.h"
+#include "sysstate.h"
 
 __EXPORT int user_start(int argc, char *argv[]);
 
 extern void up_cxxinitialize(void);
 
-struct sys_state_s 	system_state;
+struct sys_state_s system_state;
 
 static struct hrt_call serial_dma_call;
 
@@ -142,29 +145,14 @@ user_start(int argc, char *argv[])
 	LED_BLUE(false);
 	LED_SAFETY(false);
 
-	/* turn on servo power (if supported) */
-	POWER_SERVO(true);
-
-	/* start the safety switch handler */
-	safety_init();
-
 	/* configure the first 8 PWM outputs (i.e. all of them) */
 	up_pwm_servo_init(0xff);
 
-	/* initialise the control inputs */
-	controls_init();
-
-	/* start the FMU interface */
-	interface_init();
+	/* start the i2c slave interface */
+	i2c_interface_init();
 
 	/* add a performance counter for the interface */
 	perf_counter_t interface_perf = perf_alloc(PC_ELAPSED, "interface");
-
-	/* add a performance counter for mixing */
-	perf_counter_t mixer_perf = perf_alloc(PC_ELAPSED, "mix");
-
-	/* add a performance counter for controls */
-	perf_counter_t controls_perf = perf_alloc(PC_ELAPSED, "controls");
 
 	/* and one for measuring the loop rate */
 	perf_counter_t loop_perf = perf_alloc(PC_INTERVAL, "loop");
@@ -206,30 +194,19 @@ user_start(int argc, char *argv[])
 		interface_tick();
 		perf_end(interface_perf);
 
-		/* kick the mixer */
-		perf_begin(mixer_perf);
-		mixer_tick();
-		perf_end(mixer_perf);
-
-		/* kick the control inputs */
-		perf_begin(controls_perf);
-		controls_tick();
-		perf_end(controls_perf);
-
 		/* check for debug activity */
 		show_debug_messages();
 
 		/* post debug state at ~1Hz */
 		if (hrt_absolute_time() - last_debug_time > (1000 * 1000)) {
 
-			struct mallinfo minfo = mallinfo();
+			struct mallinfo minfoloop = mallinfo();
 
-			isr_debug(1, "d:%u s=0x%x a=0x%x f=0x%x m=%u", 
+			isr_debug(1, "d:%u s=0x%x f=0x%x m=%u", 
 				  (unsigned)r_page_setup[PX4IO_P_SETUP_SET_DEBUG],
 				  (unsigned)r_status_flags,
-				  (unsigned)r_setup_arming,
 				  (unsigned)r_setup_features,
-				  (unsigned)minfo.mxordblk);
+				  (unsigned)minfoloop.mxordblk);
 			last_debug_time = hrt_absolute_time();
 		}
 	}
