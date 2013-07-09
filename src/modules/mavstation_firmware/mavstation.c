@@ -58,6 +58,7 @@
 #include "protocol.h"
 #include "registers.h"
 #include "sysstate.h"
+#include "i2c.h"
 
 __EXPORT int user_start(int argc, char *argv[]);
 
@@ -191,7 +192,7 @@ user_start(int argc, char *argv[])
 
 		/* kick the interface */
 		perf_begin(interface_perf);
-		interface_tick();
+		i2c_interface_tick();
 		perf_end(interface_perf);
 
 		/* check for debug activity */
