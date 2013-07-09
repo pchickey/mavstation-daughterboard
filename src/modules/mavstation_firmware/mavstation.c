@@ -59,6 +59,7 @@
 #include "registers.h"
 #include "sysstate.h"
 #include "i2c.h"
+#include "gpio.h"
 
 __EXPORT int user_start(int argc, char *argv[]);
 
@@ -152,6 +153,9 @@ user_start(int argc, char *argv[])
 	/* start the i2c slave interface */
 	i2c_interface_init();
 
+	/* start gpio interface */
+	gpio_interface_init();
+
 	/* add a performance counter for the interface */
 	perf_counter_t interface_perf = perf_alloc(PC_ELAPSED, "interface");
 
@@ -193,6 +197,14 @@ user_start(int argc, char *argv[])
 		/* kick the interface */
 		perf_begin(interface_perf);
 		i2c_interface_tick();
+		gpio_interface_tick();
+
+#ifdef DEBUG_GPIOS
+		for (int i = 0; i < 5; i++) {
+			gpio_interface_setled((i%3), gpio_interface_getbtn(i));
+		}
+#endif
+
 		perf_end(interface_perf);
 
 		/* check for debug activity */
