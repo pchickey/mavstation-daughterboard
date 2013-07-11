@@ -155,6 +155,8 @@ user_start(int argc, char *argv[])
 
 	/* start gpio interface */
 	gpio_interface_init();
+	/* pass usart2 to raspberry pi by default */
+	gpio_interface_setusart2mux(true);
 
 	/* add a performance counter for the interface */
 	perf_counter_t interface_perf = perf_alloc(PC_ELAPSED, "interface");
@@ -164,25 +166,6 @@ user_start(int argc, char *argv[])
 
 	struct mallinfo minfo = mallinfo();
 	lowsyslog("MEM: free %u, largest %u\n", minfo.mxordblk, minfo.fordblks);
-
-#if 0
-	/* not enough memory, lock down */
-	if (minfo.mxordblk < 500) {
-		lowsyslog("ERR: not enough MEM");
-		bool phase = false;
-
-		if (phase) {
-			LED_AMBER(true);
-			LED_BLUE(false);
-		} else {
-			LED_AMBER(false);
-			LED_BLUE(true);
-		}
-
-		phase = !phase;
-		usleep(300000);
-	}
-#endif
 
 	/*
 	 * Run everything in a tight loop.

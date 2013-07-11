@@ -31,12 +31,19 @@ void gpio_interface_init(void) {
     for (int i = 0; i < num_buttons; i++) {
         stm32_configgpio(buttons[i].gpio);
     }
+
+    stm32_gpiowrite(GPIO_USART2MUX,false);
+    stm32_configgpio(GPIO_USART2MUX);
 }
 
 void gpio_interface_tick(void) {
     for (int i = 0; i < num_buttons; i++) {
         buttons[i].state = stm32_gpioread(buttons[i].gpio);
     }
+}
+
+void gpio_interface_setusart2mux(bool conn_to_rpi) {
+    stm32_gpiowrite(GPIO_USART2MUX,conn_to_rpi);
 }
 
 void gpio_interface_setled(int led, bool on) {
