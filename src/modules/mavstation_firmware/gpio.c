@@ -16,11 +16,11 @@ struct btn {
 static const uint32_t leds[] = { GPIO_LED1, GPIO_LED2, GPIO_LED3 };
 static const int num_leds = sizeof(leds)/sizeof(leds[0]);
 
-static struct btn buttons[] = { { .gpio = GPIO_BTN1, .state = false }
+static struct btn buttons[] = { { .gpio = GPIO_BTN0, .state = false }
+                              , { .gpio = GPIO_BTN1, .state = false }
                               , { .gpio = GPIO_BTN2, .state = false }
                               , { .gpio = GPIO_BTN3, .state = false }
-                              , { .gpio = GPIO_BTN4, .state = false }
-                              , { .gpio = GPIO_BTN5, .state = false } };
+                              , { .gpio = GPIO_BTN4, .state = false } };
 static int num_buttons = sizeof(buttons)/sizeof(buttons[0]);
 
 void gpio_interface_init(void) {
