@@ -53,13 +53,11 @@
 
 #include <stm32_uart.h>
 
-#define DEBUG
-#include "mavstation.h"
 #include "protocol.h"
-#include "registers.h"
 #include "sysstate.h"
-#include "i2c.h"
+#include "i2c_slave.h"
 #include "gpio.h"
+#include "appdebug.h"
 
 __EXPORT int user_start(int argc, char *argv[]);
 
@@ -69,55 +67,6 @@ struct sys_state_s system_state;
 
 static struct hrt_call serial_dma_call;
 
-/*
- * a set of debug buffers to allow us to send debug information from ISRs
- */
-
-static volatile uint32_t msg_counter;
-static volatile uint32_t last_msg_counter;
-static volatile uint8_t msg_next_out, msg_next_in;
-
-/*
- * WARNING: too large buffers here consume the memory required
- * for mixer handling. Do not allocate more than 80 bytes for
- * output.
- */
-#define NUM_MSG 2
-static char msg[NUM_MSG][40];
-
-/*
- * add a debug message to be printed on the console
- */
-void
-isr_debug(uint8_t level, const char *fmt, ...)
-{
-	if (level > r_page_setup[PX4IO_P_SETUP_SET_DEBUG]) {
-		return;
-	}
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(msg[msg_next_in], sizeof(msg[0]), fmt, ap);
-	va_end(ap);
-	msg_next_in = (msg_next_in+1) % NUM_MSG;
-	msg_counter++;
-}
-
-/*
- * show all pending debug messages
- */
-static void
-show_debug_messages(void)
-{
-	if (msg_counter != last_msg_counter) {
-		uint32_t n = msg_counter - last_msg_counter;
-		if (n > NUM_MSG) n = NUM_MSG;
-		last_msg_counter = msg_counter;
-		while (n--) {
-			debug("%s", msg[msg_next_out]);
-			msg_next_out = (msg_next_out+1) % NUM_MSG;
-		}
-	}
-}
 
 int
 user_start(int argc, char *argv[])
@@ -140,18 +89,13 @@ user_start(int argc, char *argv[])
 #endif
 
 	/* print some startup info */
-	lowsyslog("\nmavstation: starting\n");
-
-	/* default all the LEDs to off while we start */
-	LED_AMBER(false);
-	LED_BLUE(false);
-	LED_SAFETY(false);
+	debug("\nmavstation: starting\n");
 
 	/* configure the first 8 PWM outputs (i.e. all of them) */
 	up_pwm_servo_init(0xff);
 
 	/* start the i2c slave interface */
-	i2c_interface_init();
+	i2c_slave_interface_init();
 
 	/* start gpio interface */
 	gpio_interface_init();
@@ -165,13 +109,12 @@ user_start(int argc, char *argv[])
 	perf_counter_t loop_perf = perf_alloc(PC_INTERVAL, "loop");
 
 	struct mallinfo minfo = mallinfo();
-	lowsyslog("MEM: free %u, largest %u\n", minfo.mxordblk, minfo.fordblks);
+	debug("MEM: free %u, largest %u\n", minfo.mxordblk, minfo.fordblks);
 
 	/*
 	 * Run everything in a tight loop.
 	 */
 
-	uint64_t last_debug_time = 0;
 	for (;;) {
 
 		/* track the rate at which the loop is running */
@@ -179,9 +122,10 @@ user_start(int argc, char *argv[])
 
 		/* kick the interface */
 		perf_begin(interface_perf);
-		i2c_interface_tick();
+		i2c_slave_interface_tick();
 		gpio_interface_tick();
 
+#define DEBUG_GPIOS
 #ifdef DEBUG_GPIOS
 		for (int i = 0; i < 5; i++) {
 			gpio_interface_setled((i%3), gpio_interface_getbtn(i));
@@ -192,19 +136,8 @@ user_start(int argc, char *argv[])
 
 		/* check for debug activity */
 		show_debug_messages();
+		isr_debug_tick();
 
-		/* post debug state at ~1Hz */
-		if (hrt_absolute_time() - last_debug_time > (1000 * 1000)) {
-
-			struct mallinfo minfoloop = mallinfo();
-
-			isr_debug(1, "d:%u s=0x%x f=0x%x m=%u", 
-				  (unsigned)r_page_setup[PX4IO_P_SETUP_SET_DEBUG],
-				  (unsigned)r_status_flags,
-				  (unsigned)r_setup_features,
-				  (unsigned)minfoloop.mxordblk);
-			last_debug_time = hrt_absolute_time();
-		}
 	}
 }
 

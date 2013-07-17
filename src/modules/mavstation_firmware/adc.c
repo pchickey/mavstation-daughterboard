@@ -46,9 +46,8 @@
 #include <drivers/drv_hrt.h>
 #include <systemlib/perf_counter.h>
 
-#define DEBUG
-#include "mavstation.h"
 #include "adc.h"
+#include "appdebug.h"
 
 /*
  * Register accessors.

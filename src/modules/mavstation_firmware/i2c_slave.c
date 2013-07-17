@@ -44,9 +44,9 @@
 #include <stm32_i2c.h>
 #include <stm32_dma.h>
 
-#include "mavstation.h"
-#include "i2c.h"
-#include "registers.h"
+#include "appdebug.h"
+#include "i2c_slave.h"
+#include "slave_registers.h"
 
 /*
  * I2C register definitions.
@@ -70,8 +70,11 @@ static void		i2c_rx_setup(void);
 static void		i2c_tx_setup(void);
 static void		i2c_rx_complete(void);
 static void		i2c_tx_complete(void);
-static void		i2c_dump(void);
 static void     i2c_reset(void);
+
+#ifdef DEBUG
+static void		i2c_dump(void);
+#endif
 
 static DMA_HANDLE	rx_dma;
 static DMA_HANDLE	tx_dma;
@@ -94,9 +97,9 @@ enum {
 	DIR_RX = 2
 } direction;
 
-void i2c_interface_init(void)
+void i2c_slave_interface_init(void)
 {
-	debug("i2c init");
+	debug("i2c slave init");
 
 	/* allocate DMA handles and initialise DMA */
 	rx_dma = stm32_dmachannel(DMACHAN_I2C1_RX);
@@ -150,14 +153,12 @@ void i2c_interface_init(void)
 #endif
 }
 
-void i2c_interface_tick(void) { }
-
+void i2c_slave_interface_tick(void) { }
 
 /*
   reset the I2C bus
   used to recover from lockups
  */
-#pragma GCC diagnostic ignored "-Wunused-function"
 void i2c_reset(void)
 {
 	rCR1 |= I2C_CR1_SWRST;
@@ -272,14 +273,14 @@ i2c_rx_complete(void)
 		/* work out how many registers are being written */
 		unsigned count = (rx_len - 2) / 2;
 		if (count > 0) {
-			registers_set(selected_page, selected_offset, (const uint16_t *)&rx_buf[2], count);
+			slave_registers_set(selected_page, selected_offset, (const uint16_t *)&rx_buf[2], count);
 		} else {
 			/* no registers written, must be an address cycle */
 			volatile uint16_t *regs;
 			unsigned reg_count;
 
 			/* work out which registers are being addressed */
-			int ret = registers_get(selected_page, selected_offset, &regs, &reg_count);
+			int ret = slave_registers_get(selected_page, selected_offset, &regs, &reg_count);
 			if (ret == 0) {
 				tx_buf = (uint8_t *)regs;
 				tx_len = reg_count * 2;
@@ -336,7 +337,7 @@ i2c_tx_complete(void)
 	i2c_tx_setup();
 }
 
-#pragma GCC diagnostic ignored "-Wunused-function"
+#ifdef DEBUG
 static void i2c_dump(void)
 {
 	debug("CR1   0x%08x  CR2   0x%08x", rCR1,  rCR2);
@@ -344,5 +345,4 @@ static void i2c_dump(void)
 	debug("CCR   0x%08x  TRISE 0x%08x", rCCR,  rTRISE);
 	debug("SR1   0x%08x  SR2   0x%08x", rSR1,  rSR2);
 }
-#pragma GCC diagnostic pop
-
+#endif
